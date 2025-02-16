@@ -22,6 +22,23 @@ export function AddServerDialog() {
   const [checkResult, setCheckResult] = useState<Server | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const normalizeAddress = (input: string): { address: string; port?: number } => {
+    // Remove any protocol prefixes and trailing slashes
+    let address = input.replace(/^(minecraft:\/\/|https?:\/\/)/i, '').trim();
+    address = address.split('/')[0];
+
+    // Check for explicit port
+    const portMatch = address.match(/:(\d+)$/);
+    if (portMatch) {
+      const port = parseInt(portMatch[1], 10);
+      address = address.slice(0, -portMatch[0].length);
+      return { address, port };
+    }
+
+    // No port specified, let the backend handle default
+    return { address };
+  };
+
   const checkServer = async () => {
     if (!serverAddress) return;
 
@@ -30,10 +47,23 @@ export function AddServerDialog() {
     setCheckResult(null);
 
     try {
-      const metadata = await fetchServerMetadata(serverAddress);
+      const { address, port } = normalizeAddress(serverAddress);
+      const metadata = await fetchServerMetadata(address, port);
       setCheckResult(metadata);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to check server");
+      let errorMessage = "Failed to check server";
+      
+      if (err instanceof Error) {
+        if (err.message.includes("connection refused")) {
+          errorMessage = "Server is offline or port is blocked";
+        } else if (err.message.includes("Could not resolve address")) {
+          errorMessage = "Invalid server address";
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsChecking(false);
     }

@@ -3,6 +3,8 @@ import type { Server } from "./types";
 
 export async function fetchServerMetadata(address: string, port?: number): Promise<Server> {
   try {
+    console.log(`Checking server: ${address}${port ? `:${port}` : ''}`);
+    
     const metadata = await invoke<{
       name: string;
       motd: string;
