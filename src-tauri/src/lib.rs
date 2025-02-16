@@ -3,7 +3,6 @@ use serde::Serialize;
 use std::time::Instant;
 use tokio::net::TcpStream;
 use craftping::{tokio::ping, Chat};
-use tokio::net::lookup_host;
 
 #[derive(Debug, Serialize, Clone)]
 pub struct ServerMetadata {
@@ -52,19 +51,17 @@ mod commands {
 
     #[tauri::command]
     pub async fn get_server_metadata(address: String, port: Option<u16>) -> Result<ServerMetadata, Error> {
-        // Parse address and resolve port
-        let (resolved_address, resolved_port) = resolve_server_address(&address, port).await?;
-
-        println!("Resolved address: {}:{}", resolved_address, resolved_port);
-
-        // Try Java server first
-        match query_java_server(&resolved_address, resolved_port).await {
+        // Try Java server first (default port 25565)
+        match query_java_server(&address, port.unwrap_or(25565)).await {
             Ok(metadata) => Ok(metadata),
             Err(java_err) => {
-                // If Java fails, try Bedrock with the same resolved address
-                match query_bedrock_server(&resolved_address, resolved_port).await {
+                // If Java fails, try Bedrock
+                match query_bedrock_server(&address, port.unwrap_or(19132)).await {
                     Ok(metadata) => Ok(metadata),
-                    Err(_) => Err(java_err)
+                    Err(_) => {
+                        // Return the Java error as it's more likely to be the intended protocol
+                        Err(java_err)
+                    }
                 }
             }
         }
@@ -72,6 +69,7 @@ mod commands {
 }
 
 mod settings;
+mod minecraft;
 
 pub fn run() {
     tauri::Builder::default()
@@ -80,6 +78,9 @@ pub fn run() {
             commands::get_server_metadata,
             settings::get_setting,
             settings::set_setting,
+            minecraft::start_minecraft_monitoring,
+            minecraft::stop_minecraft_monitoring,
+            minecraft::is_monitoring
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -88,48 +89,49 @@ pub fn run() {
 async fn query_java_server(address: &str, port: u16) -> Result<ServerMetadata, Error> {
     let start = Instant::now();
     
-    // Single connection attempt
+    // Connect to the server using tokio's async TcpStream
     let mut stream = TcpStream::connect((address, port))
         .await
         .map_err(|e| Error::Connection(e.to_string()))?;
 
-    // Simple ping without protocol validation
-    match ping(&mut stream, address, port).await {
-        Ok(response) => {
-            let latency = start.elapsed().as_millis() as u64;
-            
-            // Extract player list if available
-            let players = response.sample
-                .map(|sample| {
-                    sample.iter()
-                        .map(|p| p.name.clone())
-                        .collect()
-                })
-                .unwrap_or_else(|| Vec::new());
+    // Ping the server
+    let response = ping(&mut stream, address, port)
+        .await
+        .map_err(|e| Error::PingError(e.to_string()))?;
 
-            // Convert favicon from PNG bytes to base64 URL if available
-            let favicon_url = response.favicon.as_ref().map(|bytes| {
-                format!("data:image/png;base64,{}", base64::encode(bytes))
-            });
+    let latency = start.elapsed().as_millis() as u64;
 
-            // Extract MOTD text from Chat component
-            let motd = extract_chat_text(&response.description);
+    // Extract player list if available
+    let players = response.sample
+        .map(|sample| {
+            sample.iter()
+                .map(|p| p.name.clone())
+                .collect()
+        })
+        .unwrap_or_else(|| Vec::new());
 
-            Ok(ServerMetadata {
-                name: response.version.clone(),
-                motd,
-                version: response.version,  // Just show the version string as-is
-                player_count: response.online_players as u32,
-                max_players: response.max_players as u32,
-                players,
-                favicon_url,
-                is_online: true,
-                latency,
-                server_type: ServerType::Java
-            })
-        }
-        Err(e) => Err(Error::PingError(e.to_string()))
-    }
+    // Convert favicon from PNG bytes to base64 URL if available
+    let favicon_url = response.favicon.as_ref().map(|bytes| {
+        format!("data:image/png;base64,{}", base64::encode(bytes))
+    });
+
+    // Extract MOTD text from Chat component
+    let motd = extract_chat_text(&response.description);
+
+    println!("Server version: {}", response.version);
+
+    Ok(ServerMetadata {
+        name: response.version.clone(),
+        motd,
+        version: format!("Protocol: {}", response.protocol),
+        player_count: response.online_players as u32,
+        max_players: response.max_players as u32,
+        players,
+        favicon_url,
+        is_online: true,
+        latency,
+        server_type: ServerType::Java
+    })
 }
 
 // Helper function to extract text from Chat component
@@ -145,34 +147,4 @@ async fn query_bedrock_server(_address: &str, _port: u16) -> Result<ServerMetada
     // TODO: Implement Bedrock server query
     // For now, return error as we're focusing on Java servers
     Err(Error::PingError("Bedrock servers not yet supported".to_string()))
-}
-
-// Helper function to resolve server address
-async fn resolve_server_address(address: &str, port: Option<u16>) -> Result<(String, u16), Error> {
-    // Default Minecraft port
-    const DEFAULT_PORT: u16 = 25565;
-
-    // If port is explicitly provided via parameter, use it
-    if let Some(explicit_port) = port {
-        return Ok((address.to_string(), explicit_port));
-    }
-
-    // Check if address includes port (e.g., "example.com:25565")
-    if let Some((host, port_str)) = address.rsplit_once(':') {
-        if let Ok(port_num) = port_str.parse::<u16>() {
-            return Ok((host.to_string(), port_num));
-        }
-    }
-
-    // Try SRV record lookup first
-    let srv_address = format!("_minecraft._tcp.{}", address);
-    if let Ok(addrs) = lookup_host(&srv_address).await {
-        let addrs: Vec<_> = addrs.collect();
-        if let Some(addr) = addrs.first() {
-            return Ok((addr.ip().to_string(), addr.port()));
-        }
-    }
-
-    // No SRV record found, use default port
-    Ok((address.to_string(), DEFAULT_PORT))
 }
