@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { MinecraftText } from "@/components/ui/minecraft-text";
-import { Loader2, Plus, Users } from "lucide-react";
+import { Loader2, CheckCircle, Users } from "lucide-react";
 import { useState } from "react";
 
 import type { Server } from "@/lib/types";
@@ -43,13 +43,13 @@ export function AddServerDialog() {
     <Dialog>
       <DialogTrigger asChild>
         <Button className="gap-2">
-          <Plus className="h-4 w-4" />
-          Add Server
+          <CheckCircle className="h-4 w-4" />
+          Check Server
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add New Server</DialogTitle>
+          <DialogTitle>Check Server</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="flex gap-4">

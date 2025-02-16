@@ -5,7 +5,9 @@ function App() {
   return (
     <div className="h-screen flex flex-col bg-background">
       <TitleBar />
-      <MainContent />
+      <div className="flex-1 overflow-y-auto">
+        <MainContent />
+      </div>
     </div>
   );
 }

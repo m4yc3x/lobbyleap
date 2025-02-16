@@ -68,11 +68,15 @@ mod commands {
     }
 }
 
+mod settings;
+
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
-            commands::get_server_metadata
+            commands::get_server_metadata,
+            settings::get_setting,
+            settings::set_setting,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

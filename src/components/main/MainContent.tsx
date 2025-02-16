@@ -7,11 +7,11 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ChevronDown, ChevronUp, Users, Star, Sparkles } from "lucide-react";
+import { ChevronDown, ChevronUp, Users, Star } from "lucide-react";
 import { useState } from "react";
-import { cn } from "@/lib/utils";
 import { AddServerDialog } from "./AddServerDialog";
 import type { Server } from "../../lib/types";
+import { SponsoredServers } from "./SponsoredServers";
 
 // Update mock data to include all required fields
 const servers: Server[] = [
@@ -132,9 +132,6 @@ function ServerCard({ server }: { server: Server }) {
 }
 
 export function MainContent() {
-  const [isFeaturedExpanded, setIsFeaturedExpanded] = useState(true);
-  const sponsoredServers = servers.filter(server => server.isSponsored);
-
   return (
     <main className="flex-1 p-8">
       <div className="max-w-5xl mx-auto">
@@ -145,62 +142,7 @@ export function MainContent() {
         
         <div className="grid gap-4">
           {/* Sponsored Servers */}
-          <div>
-            <Collapsible 
-              defaultOpen 
-              open={isFeaturedExpanded} 
-              onOpenChange={setIsFeaturedExpanded}
-            >
-              <div className={cn(
-                "transition-all duration-300 ease-in-out origin-left",
-                !isFeaturedExpanded && "w-fit scale-95 hover:scale-100"
-              )}>
-                <CollapsibleTrigger asChild>
-                  <Button 
-                    variant={isFeaturedExpanded ? "ghost" : "outline"} 
-                    className={cn(
-                      "w-full flex items-center gap-2 justify-start transition-all duration-300",
-                      isFeaturedExpanded && "hover:bg-transparent p-0 h-auto",
-                      !isFeaturedExpanded && "px-4 py-2 shadow-sm hover:shadow-md"
-                    )}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className={cn(
-                        "transition-transform duration-300",
-                        !isFeaturedExpanded && "rotate-180"
-                      )}>
-                        <ChevronDown className="h-4 w-4" />
-                      </div>
-                      <h2 className="text-xl font-semibold flex items-center gap-2">
-                        <span>Featured Servers</span>
-                        <Sparkles className={cn(
-                          "h-4 w-4 text-yellow-500 transition-all duration-300",
-                          !isFeaturedExpanded && "scale-90"
-                        )} />
-                        <span className={cn(
-                          "text-sm font-normal text-muted-foreground transition-all duration-300",
-                          isFeaturedExpanded ? "opacity-0 w-0" : "opacity-100 w-auto"
-                        )}>
-                          ({sponsoredServers.length})
-                        </span>
-                      </h2>
-                    </div>
-                  </Button>
-                </CollapsibleTrigger>
-              </div>
-
-              <CollapsibleContent className="space-y-4 mt-4 transition-all duration-300">
-                <div className={cn(
-                  "grid gap-4 transition-all duration-300",
-                  isFeaturedExpanded ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4"
-                )}>
-                  {sponsoredServers.map(server => (
-                    <ServerCard key={server.id} server={server} />
-                  ))}
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          </div>
+          <SponsoredServers />
 
           {/* Regular Servers */}
           <div className="space-y-4">

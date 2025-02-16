@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Window } from "@tauri-apps/api/window";
 import { Minus, Square, X } from "lucide-react";
+import { ThemeToggle } from "./ui/theme-toggle";
 
 export function TitleBar() {
   const [isMaximized, setIsMaximized] = useState(false);
@@ -26,7 +27,7 @@ export function TitleBar() {
   }, []);
 
   return (
-    <div data-tauri-drag-region className="h-10 flex justify-between items-center border-b bg-background select-none">
+    <div data-tauri-drag-region className="h-10 flex justify-between items-center border-b bg-background select-none sticky top-0 z-50">
       {/* App title/logo area */}
       <div className="px-4 flex items-center gap-2">
         <div className="w-3 h-3 rounded-full bg-primary" />
@@ -34,7 +35,8 @@ export function TitleBar() {
       </div>
 
       {/* Window controls */}
-      <div className="flex">
+      <div className="flex items-center">
+        <ThemeToggle />
         <button
           onClick={() => appWindow.minimize()}
           className="inline-flex items-center justify-center h-10 w-10 text-muted-foreground hover:bg-muted transition-colors"
