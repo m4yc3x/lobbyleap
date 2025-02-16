@@ -12,6 +12,7 @@ import { useState } from "react";
 import { AddServerDialog } from "./AddServerDialog";
 import type { Server } from "../../lib/types";
 import { SponsoredServers } from "./SponsoredServers";
+import { LoginDialog } from "./Login";
 
 // Update mock data to include all required fields
 const servers: Server[] = [
@@ -137,7 +138,10 @@ export function MainContent() {
       <div className="max-w-5xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold">Minecraft Servers</h1>
-          <AddServerDialog />
+          <div className="flex gap-2">
+            <LoginDialog />
+            <AddServerDialog />
+          </div>
         </div>
         
         <div className="grid gap-4">
