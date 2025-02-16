@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Lock, Unlock, Loader2 } from "lucide-react";
+import { Lock, Unlock, Loader2, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from '@tauri-apps/api/event';
@@ -15,9 +15,13 @@ import {
 } from "@/components/ui/dialog";
 
 interface MinecraftCredentials {
-  uuid?: string;
-  access_token?: string;
-  username?: string;
+  uuid: string;
+  access_token: string;
+  username: string;
+  gameDir: string;
+  clientId: string;
+  xuid: string;
+  userType: string;
 }
 
 export function LoginDialog() {
@@ -62,9 +66,29 @@ export function LoginDialog() {
       const uuid = await invoke<string>("get_setting", { key: "minecraft_uuid" });
       const accessToken = await invoke<string>("get_setting", { key: "minecraft_access_token" });
       const username = await invoke<string>("get_setting", { key: "minecraft_username" });
+      const gameDir = await invoke<string>("get_setting", { key: "minecraft_game_dir" });
+      const clientId = await invoke<string>("get_setting", { key: "minecraft_client_id" });
+      const xuid = await invoke<string>("get_setting", { key: "minecraft_xuid" });
+      const userType = await invoke<string>("get_setting", { key: "minecraft_user_type" });
 
-      if (uuid && accessToken && username) {
-        setCredentials({ uuid, access_token: accessToken, username });
+      console.log("Loaded credentials:", {
+        uuid, accessToken, username, gameDir, clientId, xuid, userType
+      });
+
+      // Only set credentials if we have the required fields and they're not empty strings
+      if (uuid && accessToken && username && 
+          uuid.trim() !== "" && 
+          accessToken.trim() !== "" && 
+          username.trim() !== "") {
+        setCredentials({
+          uuid,
+          access_token: accessToken,
+          username,
+          gameDir,
+          clientId,
+          xuid,
+          userType,
+        });
       }
     } catch (error) {
       console.error("Failed to load credentials:", error);
@@ -96,6 +120,24 @@ export function LoginDialog() {
       setIsLoading(false);
     } catch (error) {
       console.error("Failed to stop monitoring:", error);
+    }
+  };
+
+  const handleDeleteCredentials = async () => {
+    try {
+      // Delete all credential-related settings
+      await invoke("set_setting", { key: "minecraft_uuid", value: "" });
+      await invoke("set_setting", { key: "minecraft_access_token", value: "" });
+      await invoke("set_setting", { key: "minecraft_username", value: "" });
+      await invoke("set_setting", { key: "minecraft_game_dir", value: "" });
+      await invoke("set_setting", { key: "minecraft_client_id", value: "" });
+      await invoke("set_setting", { key: "minecraft_xuid", value: "" });
+      await invoke("set_setting", { key: "minecraft_user_type", value: "" });
+
+      setCredentials(null);
+      setIsOpen(false);
+    } catch (error) {
+      console.error("Failed to delete credentials:", error);
     }
   };
 
@@ -151,7 +193,7 @@ export function LoginDialog() {
                       <Input
                         value={credentials.uuid}
                         readOnly
-                        className={showCredentials ? "" : "blur-sm"}
+                        className={showCredentials ? "" : "blur-xs"}
                       />
                     </div>
                   </div>
@@ -162,29 +204,41 @@ export function LoginDialog() {
                       <Input
                         value={credentials.access_token}
                         readOnly
-                        className={showCredentials ? "" : "blur-sm"}
+                        className={showCredentials ? "" : "blur-xs"}
                       />
                     </div>
                   </div>
                   
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                    onClick={() => setShowCredentials(!showCredentials)}
-                  >
-                    {showCredentials ? (
-                      <>
-                        <EyeOffIcon className="h-4 w-4 mr-2" />
-                        Hide Credentials
-                      </>
-                    ) : (
-                      <>
-                        <EyeIcon className="h-4 w-4 mr-2" />
-                        Show Credentials
-                      </>
-                    )}
-                  </Button>
+                  <div className="flex gap-2 mt-4">
+                    <Button autoFocus
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => setShowCredentials(!showCredentials)}
+                    >
+                      {showCredentials ? (
+                        <>
+                          <EyeOffIcon className="h-4 w-4 mr-2" />
+                          Hide Credentials
+                        </>
+                      ) : (
+                        <>
+                          <EyeIcon className="h-4 w-4 mr-2" />
+                          Show Credentials
+                        </>
+                      )}
+                    </Button>
+                    
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="gap-2"
+                      onClick={handleDeleteCredentials}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Delete
+                    </Button>
+                  </div>
                 </div>
               </div>
             </>

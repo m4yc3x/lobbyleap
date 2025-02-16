@@ -8,11 +8,18 @@ use once_cell::sync::Lazy;
 
 static IS_MONITORING: Lazy<Arc<AtomicBool>> = Lazy::new(|| Arc::new(AtomicBool::new(false)));
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Clone, Debug)]
 struct MinecraftCredentials {
     uuid: String,
     access_token: String,
     username: String,
+    #[serde(rename = "gameDir")]
+    game_dir: String,
+    #[serde(rename = "clientId")]
+    client_id: String,
+    xuid: String,
+    #[serde(rename = "userType")]
+    user_type: String,
 }
 
 pub fn monitor_minecraft_process(app_handle: tauri::AppHandle) -> bool {
@@ -23,13 +30,22 @@ pub fn monitor_minecraft_process(app_handle: tauri::AppHandle) -> bool {
         if process.name().contains("javaw") {
             // Get command line arguments
             if let Some(args) = parse_minecraft_args(process.cmd()) {
+                println!("Found Minecraft process with args: {:?}", args);
+                
+                // Create credentials with proper field mapping
                 let credentials = MinecraftCredentials {
-                    uuid: args.get("uuid").unwrap_or(&String::new()).clone(),
-                    access_token: args.get("accessToken").unwrap_or(&String::new()).clone(),
-                    username: args.get("username").unwrap_or(&String::new()).clone(),
+                    uuid: args.get("uuid").unwrap_or(&String::new()).to_string(),
+                    access_token: args.get("accessToken").unwrap_or(&String::new()).to_string(),
+                    username: args.get("username").unwrap_or(&String::new()).to_string(),
+                    game_dir: args.get("gameDir").unwrap_or(&String::new()).to_string(),
+                    client_id: args.get("clientId").unwrap_or(&String::new()).to_string(),
+                    xuid: args.get("xuid").unwrap_or(&String::new()).to_string(),
+                    user_type: args.get("userType").unwrap_or(&String::new()).to_string(),
                 };
 
-                // Store the credentials
+                println!("Storing credentials: {:?}", credentials);
+
+                // Store all credentials
                 let _ = super::settings::set_setting(
                     app_handle.clone(),
                     "minecraft_uuid".into(),
@@ -45,10 +61,30 @@ pub fn monitor_minecraft_process(app_handle: tauri::AppHandle) -> bool {
                     "minecraft_username".into(),
                     credentials.username.clone(),
                 );
+                let _ = super::settings::set_setting(
+                    app_handle.clone(),
+                    "minecraft_game_dir".into(),
+                    credentials.game_dir.clone(),
+                );
+                let _ = super::settings::set_setting(
+                    app_handle.clone(),
+                    "minecraft_client_id".into(),
+                    credentials.client_id.clone(),
+                );
+                let _ = super::settings::set_setting(
+                    app_handle.clone(),
+                    "minecraft_xuid".into(),
+                    credentials.xuid.clone(),
+                );
+                let _ = super::settings::set_setting(
+                    app_handle.clone(),
+                    "minecraft_user_type".into(),
+                    credentials.user_type.clone(),
+                );
 
                 // Get the main window and emit the event
                 if let Some(window) = app_handle.get_webview_window("main") {
-                    let _ = window.emit("minecraft-credentials-updated", credentials);
+                    let _ = window.emit("minecraft-credentials-updated", &credentials);
                 }
                 return true;
             }
@@ -69,6 +105,7 @@ fn parse_minecraft_args(cmd: &[String]) -> Option<HashMap<String, String>> {
         }
     }
 
+    // Only require uuid, accessToken, and username
     if args.contains_key("uuid") && args.contains_key("accessToken") && args.contains_key("username") {
         Some(args)
     } else {

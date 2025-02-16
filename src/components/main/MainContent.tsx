@@ -137,7 +137,7 @@ export function MainContent() {
     <main className="flex-1 p-8">
       <div className="max-w-5xl mx-auto">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Minecraft Servers</h1>
+          <h1 className="text-3xl font-bold">Multiplayer Server List</h1>
           <div className="flex gap-2">
             <LoginDialog />
             <AddServerDialog />
