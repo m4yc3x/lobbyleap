@@ -30,7 +30,7 @@ export function TitleBar() {
       {/* App title/logo area */}
       <div className="px-4 flex items-center gap-2">
         <div className="w-3 h-3 rounded-full bg-primary" />
-        <span className="text-sm font-semibold">Tauri App</span>
+        <span className="text-sm font-semibold">LobbyLeap</span>
       </div>
 
       {/* Window controls */}
